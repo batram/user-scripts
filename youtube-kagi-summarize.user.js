@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Kagi Summarize Button
 // @namespace    http://tampermonkey.net
-// @version      1.7
+// @version      1.8
 // @description  Adds a Kagi Summarize button to YouTube (watch page + video "more actions" menus)
 // @author       Your Name
 // @match        https://www.youtube.com/*
@@ -141,18 +141,36 @@
     // ---------------------------------------------------------------------
     // 2. Remember which video's "more actions" button was pressed
     // ---------------------------------------------------------------------
+    const MORE_ACTIONS_LABELS = ['More actions', 'Weitere Aktionen'];
+
+    function removeInjectedMenuItems() {
+        document.querySelectorAll('.kagi-dropdown-item').forEach((n) => n.remove());
+    }
+
     document.addEventListener('pointerdown', (event) => {
         let target = event.target;
         if (target && target.nodeType !== 1) target = target.parentElement;
         if (!target) return;
 
+        // Clicking our own item must not reset the context before its click handler runs
+        if (target.closest('.kagi-dropdown-item')) return;
+
+        // Any other press opens a different (or no) popup — drop stale context and items
+        lastClickedVideoUrl = '';
+        removeInjectedMenuItems();
+
         const actionButton = target.closest(ACTION_BUTTON_SELECTOR);
         if (!actionButton) return;
 
         const videoContainer = actionButton.closest(VIDEO_CONTAINER_SELECTOR);
-        const anchor = videoContainer && videoContainer.querySelector(VIDEO_LINK_SELECTOR);
-
-        lastClickedVideoUrl = anchor && anchor.href ? anchor.href : '';
+        if (videoContainer) {
+            const anchor = videoContainer.querySelector(VIDEO_LINK_SELECTOR);
+            lastClickedVideoUrl = anchor && anchor.href ? anchor.href : '';
+        } else if (location.pathname === '/watch'
+            && MORE_ACTIONS_LABELS.includes(actionButton.getAttribute('aria-label') || '')) {
+            // Watch page's own "More actions" button (not the subscribe bell, share, etc.)
+            lastClickedVideoUrl = location.href;
+        }
         console.log(TAG, 'context video:', lastClickedVideoUrl || '(none)');
     }, true);
 
@@ -160,8 +178,11 @@
     // 3. Add "Summarize with Kagi" entry to the popup context menu
     // ---------------------------------------------------------------------
     function injectDropdownMenuButton() {
+        // Only for popups opened from a video's "more actions" button
+        if (!lastClickedVideoUrl) return;
         const popupMenu = document.querySelector(POPUP_MENU_SELECTOR);
         if (!popupMenu || popupMenu.querySelector('.kagi-dropdown-item')) return;
+        const videoUrl = lastClickedVideoUrl;
 
         const menuItem = el('yt-list-item-view-model', {
             class: 'kagi-dropdown-item ytListItemViewModelHost',
@@ -198,7 +219,8 @@
         menuItem.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            openKagiSummary(lastClickedVideoUrl || (location.pathname === '/watch' ? location.href : ''));
+            openKagiSummary(videoUrl);
+            menuItem.remove();
             document.body.click(); // close the popup
         }, true);
 
