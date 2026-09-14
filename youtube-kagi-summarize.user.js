@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Kagi Summarize Button
 // @namespace    http://tampermonkey.net
-// @version      1.8
+// @version      1.9
 // @description  Adds a Kagi Summarize button to YouTube (watch page + video "more actions" menus)
 // @author       Your Name
 // @match        https://www.youtube.com/*
@@ -110,7 +110,12 @@
     // 1. Watch page: button next to Like / Share / ...
     // ---------------------------------------------------------------------
     function injectWatchPageButton() {
-        const actionsMenu = document.querySelector('#top-level-buttons-computed, ytd-menu-renderer #items');
+        // Scope to the video actions row: info panels (content notices, clarification
+        // boxes) above the title have their own ytd-menu-renderer that would match first
+        const actionsMenu = document.querySelector(
+            'ytd-watch-metadata #actions #top-level-buttons-computed, '
+            + 'ytd-watch-metadata #actions ytd-menu-renderer #items'
+        );
         if (!actionsMenu || actionsMenu.querySelector('.kagi-watch-btn')) return;
 
         const button = el('button', {
