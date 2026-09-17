@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Kagi Summarize Button
 // @namespace    http://tampermonkey.net
-// @version      1.9
+// @version      1.10
 // @description  Adds a Kagi Summarize button to YouTube (watch page + video "more actions" menus)
 // @author       Your Name
 // @match        https://www.youtube.com/*
@@ -50,6 +50,7 @@
     ].join(',');
 
     const POPUP_MENU_SELECTOR = 'ytd-popup-container yt-list-view-model, tp-yt-iron-dropdown yt-list-view-model';
+    const POPUP_CONTAINER_SELECTOR = 'ytd-popup-container, tp-yt-iron-dropdown';
 
     let lastClickedVideoUrl = '';
 
@@ -159,6 +160,12 @@
 
         // Clicking our own item must not reset the context before its click handler runs
         if (target.closest('.kagi-dropdown-item')) return;
+
+        // A press on a native menu item must not remove our row: doing so between
+        // pointerdown and pointerup shifts the list, the release lands on a different
+        // element and YouTube's click never fires. Leave the popup untouched; the item
+        // is cleaned up on the next press outside the popup.
+        if (target.closest(POPUP_CONTAINER_SELECTOR)) return;
 
         // Any other press opens a different (or no) popup — drop stale context and items
         lastClickedVideoUrl = '';
