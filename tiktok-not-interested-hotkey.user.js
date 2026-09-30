@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         TikTok "Not interested" Hotkey
 // @namespace    http://tampermonkey.net
-// @version      1.1
-// @description  Press Numpad 0 on the TikTok feed to mark the current video as "Not interested" (opens the "..." menu and clicks the item for you)
+// @version      1.0
+// @description  Press 0 on the TikTok feed to mark the current video as "Not interested" (opens the "..." menu and clicks the item for you)
 // @author       mjb
 // @match        https://www.tiktok.com/*
 // @icon         https://www.tiktok.com/favicon.ico
@@ -14,9 +14,7 @@
 (function () {
     'use strict';
 
-    // Physical keys (KeyboardEvent.code) that trigger the action, no modifiers.
-    // 'Numpad0' matches with NumLock on or off. Add 'Digit0' for the top-row 0 as well.
-    const HOTKEYS = ['Numpad0'];
+    const HOTKEY = '0';          // plain key, no modifiers
     const POPOVER_TIMEOUT = 1500; // ms to wait for the "..." popover to render
 
     // Selectors observed on tiktok.com/foryou (2026-09):
@@ -92,7 +90,7 @@
     }
 
     document.addEventListener('keydown', (e) => {
-        if (!HOTKEYS.includes(e.code)) return;
+        if (e.key.toLowerCase() !== HOTKEY) return;
         if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
         if (isTypingTarget(e.target)) return;
         e.preventDefault();
