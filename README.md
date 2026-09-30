@@ -28,5 +28,5 @@ video in Kagi's Universal Summarizer.
 
 [`tiktok-not-interested-hotkey.user.js`](tiktok-not-interested-hotkey.user.js)
 
-Press `N` on the For You feed to mark the current video as "Not interested". The script opens
+Press `Numpad 0` on the For You feed to mark the current video as "Not interested". The script opens
 the video's "..." menu and clicks the item for you; the key is ignored while typing in a field.
