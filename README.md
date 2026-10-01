@@ -24,6 +24,16 @@ results, the watch-page sidebar, the cued player poster and the end-screen sugge
 Adds a "Summarize" button on watch pages and in the video "more actions" menus that opens the
 video in Kagi's Universal Summarizer.
 
+## Hacker News Comment Navigator
+
+[`hackernews-keyboard-nav.user.js`](hackernews-keyboard-nav.user.js)
+
+Navigate comment threads with the arrow keys: Down/Up move between comments at the same or a
+shallower level, Right expands a comment (or steps into its first reply), Left collapses it and
+moves on to the next expanded one. Clicking a comment selects it.
+
+On touch screens, swipe a comment right to open it and left to close it.
+
 ## TikTok "Not interested" Hotkey
 
 [`tiktok-not-interested-hotkey.user.js`](tiktok-not-interested-hotkey.user.js)
