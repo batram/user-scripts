@@ -2,7 +2,20 @@
 
 Small userscripts for Tampermonkey / Violentmonkey and friends.
 
-Install by opening the raw `.user.js` file in a browser with a userscript manager installed.
+Install by opening a script's **Install** link below in a browser with a userscript manager
+(Violentmonkey, ScriptCat, Tampermonkey, ...) installed.
+
+Every script carries `@updateURL` / `@downloadURL` pointing at its raw file on `master`, so the
+manager checks this repo for updates on its normal schedule. An update is picked up only when
+`@version` increases, so bump it with every change. Copies installed before these headers existed
+(or pasted in by hand) have no update source: reinstall once from the Install link.
+
+| Script | Install |
+|---|---|
+| YouTube Random Frame Thumbnails | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/youtube-random-frame-thumbnails.user.js) |
+| YouTube Kagi Summarize Button | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/youtube-kagi-summarize.user.js) |
+| Hacker News Comment Navigator | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/hackernews-keyboard-nav.user.js) |
+| TikTok "Not interested" Hotkey | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/tiktok-not-interested-hotkey.user.js) |
 
 ## YouTube Random Frame Thumbnails
 

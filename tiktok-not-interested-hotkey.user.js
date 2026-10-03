@@ -1,7 +1,11 @@
 // ==UserScript==
 // @name         TikTok "Not interested" Hotkey
 // @namespace    http://tampermonkey.net
-// @version      1.0
+// @version      1.1
+// @homepageURL  https://github.com/batram/user-scripts
+// @supportURL   https://github.com/batram/user-scripts/issues
+// @updateURL    https://raw.githubusercontent.com/batram/user-scripts/master/tiktok-not-interested-hotkey.user.js
+// @downloadURL  https://raw.githubusercontent.com/batram/user-scripts/master/tiktok-not-interested-hotkey.user.js
 // @description  Press 0 on the TikTok feed to mark the current video as "Not interested" (opens the "..." menu and clicks the item for you)
 // @author       mjb
 // @match        https://www.tiktok.com/*

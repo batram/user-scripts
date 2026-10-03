@@ -1,7 +1,11 @@
 // ==UserScript==
 // @name         YouTube Random Frame Thumbnails
 // @namespace    http://tampermonkey.net
-// @version      2.1
+// @version      2.2
+// @homepageURL  https://github.com/batram/user-scripts
+// @supportURL   https://github.com/batram/user-scripts/issues
+// @updateURL    https://raw.githubusercontent.com/batram/user-scripts/master/youtube-random-frame-thumbnails.user.js
+// @downloadURL  https://raw.githubusercontent.com/batram/user-scripts/master/youtube-random-frame-thumbnails.user.js
 // @description  Replaces YouTube video thumbnails (home, search, sidebar, watch page, end-screen suggestions) with one of YouTube's own ready-made video frames instead of the uploader's custom thumbnail
 // @author       mjb
 // @match        https://www.youtube.com/*

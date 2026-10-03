@@ -1,7 +1,11 @@
 // ==UserScript==
 // @name         YouTube Kagi Summarize Button
 // @namespace    http://tampermonkey.net
-// @version      1.10
+// @version      1.11
+// @homepageURL  https://github.com/batram/user-scripts
+// @supportURL   https://github.com/batram/user-scripts/issues
+// @updateURL    https://raw.githubusercontent.com/batram/user-scripts/master/youtube-kagi-summarize.user.js
+// @downloadURL  https://raw.githubusercontent.com/batram/user-scripts/master/youtube-kagi-summarize.user.js
 // @description  Adds a Kagi Summarize button to YouTube (watch page + video "more actions" menus)
 // @author       Your Name
 // @match        https://www.youtube.com/*

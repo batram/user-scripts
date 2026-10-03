@@ -2,7 +2,11 @@
 // @name        Hacker News Comment Navigator
 // @namespace   Violentmonkey Scripts
 // @icon        data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjE4IiB2aWV3Qm94PSI0IDQgMTg4IDE4OCIgd2lkdGg9IjE4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Im00IDRoMTg4djE4OGgtMTg4eiIgZmlsbD0iI2Y2MCIvPjxwYXRoIGQ9Im03My4yNTIxNzU2IDQ1LjAxIDIyLjc0NzgyNDQgNDcuMzkxMzAwODMgMjIuNzQ3ODI0NC00Ny4zOTEzMDA4M2gxOS41NjU2OTYzMWwtMzQuMzIzNTIwNzEgNjQuNDg2NjE0Njh2NDEuNDkzMzg1MzJoLTE1Ljk4di00MS40OTMzODUzMmwtMzQuMzIzNTIwNzEtNjQuNDg2NjE0Njh6IiBmaWxsPSIjZmZmIi8+PC9zdmc+
-// @version     1.2.1
+// @version     1.2.2
+// @homepageURL https://github.com/batram/user-scripts
+// @supportURL  https://github.com/batram/user-scripts/issues
+// @updateURL   https://raw.githubusercontent.com/batram/user-scripts/master/hackernews-keyboard-nav.user.js
+// @downloadURL https://raw.githubusercontent.com/batram/user-scripts/master/hackernews-keyboard-nav.user.js
 //
 // @match       https://news.ycombinator.com/item*
 // @grant       none
