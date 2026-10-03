@@ -2,7 +2,7 @@
 // @name        Hacker News Comment Navigator
 // @namespace   Violentmonkey Scripts
 // @icon        data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjE4IiB2aWV3Qm94PSI0IDQgMTg4IDE4OCIgd2lkdGg9IjE4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Im00IDRoMTg4djE4OGgtMTg4eiIgZmlsbD0iI2Y2MCIvPjxwYXRoIGQ9Im03My4yNTIxNzU2IDQ1LjAxIDIyLjc0NzgyNDQgNDcuMzkxMzAwODMgMjIuNzQ3ODI0NC00Ny4zOTEzMDA4M2gxOS41NjU2OTYzMWwtMzQuMzIzNTIwNzEgNjQuNDg2NjE0Njh2NDEuNDkzMzg1MzJoLTE1Ljk4di00MS40OTMzODUzMmwtMzQuMzIzNTIwNzEtNjQuNDg2NjE0Njh6IiBmaWxsPSIjZmZmIi8+PC9zdmc+
-// @version     1.2.0
+// @version     1.2.1
 //
 // @match       https://news.ycombinator.com/item*
 // @grant       none
@@ -31,10 +31,15 @@
     let currentIndex = -1;
 
     const style = document.createElement('style');
+    // Follow the rendered text color, including Dark Reader and site themes.
+    // A translucent tint stays subtle without depending on an extension to
+    // rewrite this stylesheet. Paint the full row once so nested cells do not
+    // stack translucent backgrounds or leave out the indentation/vote area.
     style.textContent = `
-        .comtr.hn-nav-highlight,
-        .comtr.hn-nav-highlight td {
-            background-color: #f0f0e8 !important;
+        .comtr.hn-nav-highlight {
+            background-color: color-mix(in srgb, currentColor 12%, transparent) !important;
+            outline: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+            outline-offset: -1px;
         }
     `;
     document.head.appendChild(style);
