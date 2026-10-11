@@ -16,6 +16,7 @@ manager checks this repo for updates on its normal schedule. An update is picked
 | YouTube Kagi Summarize Button | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/youtube-kagi-summarize.user.js) |
 | Hacker News Comment Navigator | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/hackernews-keyboard-nav.user.js) |
 | TikTok "Not interested" Hotkey | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/tiktok-not-interested-hotkey.user.js) |
+| YouTube Picture-in-Picture Button | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/youtube-pip-button.user.js) |
 
 ## YouTube Random Frame Thumbnails
 
@@ -53,3 +54,21 @@ On touch screens, swipe a comment right to open it and left to close it.
 
 Press `0` on the For You feed to mark the current video as "Not interested". The script opens
 the video's "..." menu and clicks the item for you; the key is ignored while typing in a field.
+
+## YouTube Picture-in-Picture Button
+
+[`youtube-pip-button.user.js`](youtube-pip-button.user.js)
+
+Adds a picture-in-picture button to the YouTube player, styled like the player's own controls:
+next to Theater mode on desktop and in embeds, and in the top row (next to Settings) on
+m.youtube.com. Click again, or close the floating window, to return.
+
+- Chrome, Edge, Firefox (version 157 or newer) and Chromium-based apps such as Once's desktop
+  app use the standard picture-in-picture API.
+- On m.youtube.com the script clears the `disablepictureinpicture` flag YouTube sets on the
+  video, and while picture-in-picture is open it hides the tab's "hidden" state from the page,
+  so playback continues when you switch apps.
+- Older Firefox has picture-in-picture only through its own controls. There the button shows a
+  hint with the shortcut (`Ctrl+Shift+]`) instead.
+- On browsers with no way to open picture-in-picture at all (Gecko on Android, which includes
+  Once's Android app), no button is added.
