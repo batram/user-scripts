@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Picture-in-Picture Button
 // @namespace    http://tampermonkey.net
-// @version      1.0
+// @version      1.1
 // @homepageURL  https://github.com/batram/user-scripts
 // @supportURL   https://github.com/batram/user-scripts/issues
 // @updateURL    https://raw.githubusercontent.com/batram/user-scripts/master/youtube-pip-button.user.js
@@ -31,7 +31,7 @@
     //   standard: HTMLVideoElement.requestPictureInPicture (Chromium, Once desktop, Safari)
     //   webkit:   webkitSetPresentationMode (older iOS / WKWebView)
     //   hint:     desktop Firefox has PiP, but only through its own UI — explain how
-    //   none:     Gecko on Android (Firefox, Once mobile) has no way in — no button
+    //   none:     no exposed API; Once Android may supply its native bridge shortly
     // ---------------------------------------------------------------------
     const isAndroid = /Android/i.test(navigator.userAgent);
     const isGecko = /Gecko\/\d/.test(navigator.userAgent) && !/like Gecko/.test(navigator.userAgent);
@@ -47,9 +47,8 @@
         return 'none';
     }
 
-    const MODE = pipMode();
+    let MODE = pipMode();
     console.log(TAG, 'mode:', MODE);
-    if (MODE === 'none') return;
 
     const FIREFOX_SHORTCUT = isMac ? '⌘ ⌥ ⇧ ]' : 'Ctrl+Shift+]';
 
@@ -166,8 +165,9 @@
     function syncButtons() {
         const active = isActive();
         document.querySelectorAll('.' + BTN_CLASS).forEach((b) => {
-            const label = active ? 'Exit picture-in-picture' : 'Picture-in-picture';
-            if (b.getAttribute('aria-pressed') === String(active)) return;
+            const label = active ? 'Exit picture-in-picture'
+                : MODE === 'hint' ? `Picture-in-picture (${FIREFOX_SHORTCUT})` : 'Picture-in-picture';
+            if (b.getAttribute('aria-pressed') === String(active) && b.getAttribute('aria-label') === label) return;
             b.setAttribute('aria-pressed', String(active));
             b.setAttribute('aria-label', label);
             if (b.hasAttribute('title')) b.setAttribute('title', label);
@@ -349,10 +349,18 @@
         requestAnimationFrame(tick);
     }
 
+    let started = false;
     function start() {
+        MODE = pipMode();
+        if (MODE === 'none') return;
+        if (started) { syncButtons(); return; }
+        started = true;
         new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
         schedule();
     }
+    // Once's native capability handshake can finish after this userscript.
+    window.addEventListener('once-pip-ready', start);
+    document.addEventListener('DOMContentLoaded', start, { once: true });
     if (document.documentElement) start();
     else document.addEventListener('readystatechange', start, { once: true });
 })();
