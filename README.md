@@ -17,6 +17,7 @@ manager checks this repo for updates on its normal schedule. An update is picked
 | Hacker News Comment Navigator | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/hackernews-keyboard-nav.user.js) |
 | TikTok "Not interested" Hotkey | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/tiktok-not-interested-hotkey.user.js) |
 | YouTube Picture-in-Picture Button | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/youtube-pip-button.user.js) |
+| YouTube Transcript: Chinese + Pinyin + English | [Install](https://raw.githubusercontent.com/batram/user-scripts/master/youtube-transcript-pinyin.user.js) |
 
 ## YouTube Random Frame Thumbnails
 
@@ -72,3 +73,24 @@ m.youtube.com. Click again, or close the floating window, to return.
   hint with the shortcut (`Ctrl+Shift+]`) instead.
 - On browsers with no way to open picture-in-picture at all (Gecko on Android, which includes
   Once's Android app), no button is added.
+
+## YouTube Transcript: Chinese + Pinyin + English
+
+[`youtube-transcript-pinyin.user.js`](youtube-transcript-pinyin.user.js)
+
+For learning Chinese from videos with Chinese captions: the watch page's transcript panel
+("Show transcript") shows every caption cue as Chinese, pinyin and English together. YouTube
+groups several cues into one paragraph per row; the script splits those back into the
+individual subtitle lines, each with its own timestamp. Clicking a cue seeks to exactly that
+line, and the cue being spoken is highlighted as the video plays.
+
+- Chips at the top of the panel hide or show each of the three lines (hide English to test
+  yourself); the choice is remembered.
+- English comes from the video's own English captions when it has them, otherwise from
+  YouTube's automatic translation of the Chinese track.
+- Pinyin is generated in the browser with [pinyin-pro](https://github.com/zh-lx/pinyin-pro)
+  (loaded once from jsDelivr); context-aware for most multi-reading characters.
+- Videos without a Chinese caption track are left alone.
+- Captions are fetched the way the player does it (its request token and visitor id), so no
+  extra login or API key is needed. If the player has not loaded captions yet when the panel
+  opens, the script turns them on for a moment and back off again.
