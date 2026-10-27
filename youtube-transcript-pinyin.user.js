@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Transcript: Chinese + Pinyin + English
 // @namespace    http://tampermonkey.net
-// @version      1.2
+// @version      1.3
 // @homepageURL  https://github.com/batram/user-scripts
 // @supportURL   https://github.com/batram/user-scripts/issues
 // @updateURL    https://raw.githubusercontent.com/batram/user-scripts/master/youtube-transcript-pinyin.user.js
@@ -193,6 +193,7 @@
                         ? fetchEvents(trackUrl(potUrl, tracks.en))
                         : fetchEvents(trackUrl(potUrl, tracks.zh, 'en')),
                 ]);
+                attachEnglish(zh, en);
                 data = { videoId, zh, en };
                 console.log(TAG, `loaded ${zh.length} zh / ${en.length} en lines`,
                     tracks.en ? '(english track)' : '(auto-translated)');
@@ -231,25 +232,28 @@
         return out;
     }
 
-    // One cue per Chinese caption line, with the English lines whose start is
-    // closest to it. A translated track has the same timings, so that is 1:1;
-    // a human English track is timed on its own, so this is a best effort.
+    // Give every Chinese caption line the English lines whose start is closest
+    // to it. A translated track has the same timings, so that is 1:1; a human
+    // English track is timed on its own, so this is a best effort.
+    function attachEnglish(zh, en) {
+        zh.forEach((ev) => { ev.en = []; });
+        if (!zh.length) return;
+        let j = 0;
+        for (const ev of en) {
+            while (j + 1 < zh.length && Math.abs(zh[j + 1].start - ev.start) <= Math.abs(zh[j].start - ev.start)) j++;
+            zh[j].en.push(ev.text);
+        }
+    }
+
+    // One cue per Chinese caption line in the range; English-only stretches
+    // (the English track has a line where the Chinese one has none) get a cue
+    // of their own so nothing is lost.
     function cuesBetween(info, from, to) {
         const zh = eventsBetween(info.zh, from, to);
+        if (zh.length) return zh.map((ev) => ({ start: ev.start, end: ev.end, zh: ev.text, en: ev.en }));
         const en = eventsBetween(info.en, from, to);
-        const cues = zh.map((ev) => ({ start: ev.start, end: ev.end, zh: ev.text, en: [] }));
-        if (!cues.length) {
-            if (!en.length) return [];
-            return [{ start: en[0].start, end: en[en.length - 1].end, zh: '', en: en.map((e) => e.text) }];
-        }
-        for (const ev of en) {
-            let best = 0;
-            for (let i = 1; i < cues.length; i++) {
-                if (Math.abs(cues[i].start - ev.start) < Math.abs(cues[best].start - ev.start)) best = i;
-            }
-            cues[best].en.push(ev.text);
-        }
-        return cues;
+        if (!en.length) return [];
+        return [{ start: en[0].start, end: en[en.length - 1].end, zh: '', en: en.map((e) => e.text) }];
     }
 
     function fmtTime(s) {
@@ -375,8 +379,172 @@
     }
     // timeupdate doesn't bubble; capture on the document catches every video element
     document.addEventListener('timeupdate', (e) => {
-        if (e.target && e.target.tagName === 'VIDEO' && document.querySelector('.yt3l-cue')) highlight();
+        if (!e.target || e.target.tagName !== 'VIDEO') return;
+        if (document.querySelector('.yt3l-cue')) highlight();
+        if (subs.on) renderOverlay();
     }, true);
+
+    // ---------------------------------------------------------------------
+    // On-video subtitles: the same lines drawn over the player, chosen from
+    // the player's own Subtitles/CC menu
+    // ---------------------------------------------------------------------
+    const SUBS_KEY = 'yt3l-subs';
+    const SUBS_LABEL = '中文 + pīnyīn + English';
+    const subs = { on: false, zh: true, py: true, en: true };
+    try { Object.assign(subs, JSON.parse(localStorage.getItem(SUBS_KEY) || '{}')); } catch (e) { /* ignore */ }
+
+    function saveSubs() {
+        try { localStorage.setItem(SUBS_KEY, JSON.stringify(subs)); } catch (e) { /* ignore */ }
+        document.documentElement.classList.toggle('yt3l-subs-on', subs.on);
+        ['zh', 'py', 'en'].forEach((k) => document.documentElement.classList.toggle('yt3l-subs-hide-' + k, !subs[k]));
+        lastOverlay = null;
+        if (subs.on) schedule(); else removeOverlay();
+    }
+
+    function setSubsOn(on) {
+        if (subs.on === on) return;
+        subs.on = on;
+        if (on) {
+            // ours replace YouTube's captions; the nudge turns them back on
+            // only briefly when it needs the caption request
+            const p = player();
+            try { if (p && p.getOption('captions', 'track')?.languageCode) p.setOption('captions', 'track', {}); } catch (e) { /* ignore */ }
+        }
+        saveSubs();
+    }
+
+    function overlayNode() {
+        const p = player();
+        if (!p) return null;
+        let node = p.querySelector('.yt3l-overlay');
+        if (!node) {
+            node = document.createElement('div');
+            node.className = 'yt3l-overlay';
+            node.setAttribute('aria-live', 'off');
+            const box = document.createElement('div');
+            box.className = 'yt3l-overlay-box';
+            node.appendChild(box);
+            p.appendChild(node);
+        }
+        return node;
+    }
+
+    function removeOverlay() {
+        document.querySelectorAll('.yt3l-overlay').forEach((n) => n.remove());
+        lastOverlay = null;
+    }
+
+    let lastOverlay = null;    // the event currently drawn, to avoid re-rendering each tick
+    function renderOverlay() {
+        if (!subs.on || !data || data.videoId !== currentVideoId()) { removeOverlay(); return; }
+        const video = document.querySelector('#movie_player video, video.html5-main-video');
+        const node = overlayNode();
+        if (!video || !node) return;
+        const t = video.currentTime;
+        let cur = null;
+        for (const ev of data.zh) {
+            if (ev.start > t + 0.1) break;
+            if (t < ev.end || t < ev.start + 0.5) cur = ev;
+        }
+        if (cur === lastOverlay) return;
+        lastOverlay = cur;
+        const box = node.firstChild;
+        box.replaceChildren();
+        if (!cur) { node.classList.remove('yt3l-show'); return; }
+        box.appendChild(hanziWithPinyin(cur.text));
+        box.appendChild(line('yt3l-en', cur.en.join(' ')));
+        // size with the player, like YouTube's own captions
+        const p = player();
+        const h = p ? p.clientHeight : 400;
+        node.style.fontSize = Math.max(14, Math.round(h * 0.042)) + 'px';
+        node.classList.add('yt3l-show');
+    }
+
+    // The Subtitles/CC panel of the player's settings menu: the one panel with
+    // an "Options" button in its header, so no need to match the title text.
+    // YouTube rebuilds it every time it opens; add our rows each time.
+    function decorateSubtitleMenu() {
+        const panel = document.querySelector('.ytp-settings-menu .ytp-panel:has(.ytp-panel-header .ytp-panel-options)');
+        if (!panel || panel.querySelector('.yt3l-menuitem') || !pickTracks()) return;
+        const menu = panel.querySelector('.ytp-panel-menu');
+        if (!menu) return;
+        const popup = panel.closest('.ytp-settings-menu');
+
+        const radio = document.createElement('div');
+        radio.className = 'ytp-menuitem yt3l-menuitem';
+        radio.setAttribute('role', 'menuitemradio');
+        radio.tabIndex = 0;
+        radio.setAttribute('aria-checked', String(subs.on));
+        const label = document.createElement('div');
+        label.className = 'ytp-menuitem-label';
+        label.textContent = SUBS_LABEL;
+        radio.appendChild(label);
+        radio.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const others = menu.querySelectorAll('.ytp-menuitem[role="menuitemradio"]:not(.yt3l-menuitem)');
+            others.forEach((o) => o.setAttribute('aria-checked', 'false'));
+            radio.setAttribute('aria-checked', 'true');
+            setSubsOn(true);
+            rebuildRows();
+        });
+        // picking one of YouTube's own tracks (or Off) switches ours off
+        menu.querySelectorAll('.ytp-menuitem[role="menuitemradio"]').forEach((o) => {
+            o.addEventListener('click', () => {
+                radio.setAttribute('aria-checked', 'false');
+                setSubsOn(false);
+                rebuildRows();
+            });
+        });
+        menu.appendChild(radio);
+
+        const rows = [];
+        function rebuildRows() {
+            rows.forEach((r) => r.remove());
+            rows.length = 0;
+            if (subs.on) {
+                // the nudge may have left a YouTube track checked; ours is the active one
+                menu.querySelectorAll('.ytp-menuitem[role="menuitemradio"]:not(.yt3l-menuitem)')
+                    .forEach((o) => o.setAttribute('aria-checked', 'false'));
+                [['zh', '中文'], ['py', 'pīnyīn'], ['en', 'English']].forEach(([k, text]) => {
+                    const r = document.createElement('div');
+                    r.className = 'ytp-menuitem yt3l-menuitem yt3l-menuitem-sub';
+                    r.setAttribute('role', 'menuitemcheckbox');
+                    r.tabIndex = 0;
+                    r.setAttribute('aria-checked', String(!!subs[k]));
+                    const l = document.createElement('div');
+                    l.className = 'ytp-menuitem-label';
+                    l.textContent = text;
+                    const c = document.createElement('div');
+                    c.className = 'ytp-menuitem-content';
+                    const box = document.createElement('div');
+                    box.className = 'ytp-menuitem-toggle-checkbox';
+                    c.appendChild(box);
+                    r.append(l, c);
+                    r.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        subs[k] = !subs[k];
+                        r.setAttribute('aria-checked', String(subs[k]));
+                        saveSubs();
+                    });
+                    menu.appendChild(r);
+                    rows.push(r);
+                });
+            }
+            fitMenu(popup, panel, menu);
+        }
+        rebuildRows();
+    }
+
+    // YouTube sizes the popup, panel and menu with inline heights; grow them to fit our rows
+    function fitMenu(popup, panel, menu) {
+        menu.style.height = '';
+        const mh = menu.scrollHeight;
+        menu.style.height = mh + 'px';
+        const header = panel.querySelector('.ytp-panel-header');
+        const h = mh + (header ? header.offsetHeight : 0);
+        panel.style.height = h + 'px';
+        if (popup) popup.style.height = h + 'px';
+    }
 
     // ---------------------------------------------------------------------
     // Line toggles in the panel header (hide English to test yourself, ...)
@@ -455,6 +623,28 @@
             .yt3l-hide-zh.yt3l-hide-py .yt3l-zhpy { display: none; }
             .yt3l-en { font-size: 1.3rem; line-height: 1.4; color: var(--yt-spec-text-primary, #0f0f0f); opacity: .85; }
             .yt3l-hide-zh .yt3l-zh, .yt3l-hide-py .yt3l-py, .yt3l-hide-en .yt3l-en { display: none; }
+            /* on-video subtitles */
+            .yt3l-overlay {
+                position: absolute; left: 0; right: 0; bottom: 8%; z-index: 40; display: none;
+                text-align: center; pointer-events: none; padding: 0 5%;
+            }
+            .yt3l-overlay.yt3l-show { display: block; }
+            #movie_player:not(.ytp-autohide) .yt3l-overlay { bottom: calc(8% + 48px); }
+            .yt3l-overlay-box {
+                display: inline-block; max-width: 100%; padding: .25em .5em; border-radius: .15em;
+                background: rgba(8, 8, 8, .75); color: #fff; text-align: center;
+                font-family: "YouTube Noto", Roboto, "Arial Unicode Ms", Arial, Helvetica, Verdana, "PT Sans Caption", sans-serif;
+            }
+            .yt3l-overlay .yt3l-zhpy { justify-content: center; column-gap: .1em; row-gap: .1em; }
+            .yt3l-overlay .yt3l-zh { font-size: 1em; line-height: 1.25; color: #fff; }
+            .yt3l-overlay .yt3l-py { font-size: .55em; color: #e6e6e6; min-height: 1.2em; }
+            .yt3l-overlay .yt3l-en { font-size: .72em; line-height: 1.3; color: #fff; opacity: .95; margin-top: .15em; }
+            .yt3l-subs-hide-zh .yt3l-overlay .yt3l-zh, .yt3l-subs-hide-py .yt3l-overlay .yt3l-py,
+            .yt3l-subs-hide-en .yt3l-overlay .yt3l-en { display: none; }
+            .yt3l-subs-hide-zh.yt3l-subs-hide-py .yt3l-overlay .yt3l-zhpy { display: none; }
+            .yt3l-subs-hide-zh .yt3l-overlay .yt3l-zhpy { column-gap: .4em; }
+            .yt3l-subs-on .ytp-caption-window-container { display: none !important; }
+            .yt3l-menuitem-sub .ytp-menuitem-label { padding-left: 24px; }
             .yt3l-toggles { display: flex; gap: 6px; padding: 0 16px 8px; }
             .yt3l-toggle {
                 font: 500 1.2rem/1 "YouTube Noto", Roboto, Arial, sans-serif; cursor: pointer;
@@ -477,8 +667,10 @@
     async function tick() {
         queued = false;
         const rows = [...document.querySelectorAll(ROW)];
-        if (!rows.length) return;
+        if (!rows.length && !subs.on && !document.querySelector('.ytp-settings-menu .ytp-panel-options')) return;
         addStyle();
+        decorateSubtitleMenu();
+        if (!rows.length && !subs.on) return;
         const info = await load();
         if (!info) {
             // Waiting for the player's caption request or for the player itself
@@ -488,8 +680,11 @@
             }
             return;
         }
-        addToggles(rows[0]);
-        decorate(rows, info);
+        if (rows.length) {
+            addToggles(rows[0]);
+            decorate(rows, info);
+        }
+        if (subs.on) renderOverlay();
     }
     function schedule() {
         if (queued) return;
@@ -499,6 +694,8 @@
 
     function start() {
         new MutationObserver(schedule).observe(document.documentElement, { childList: true, subtree: true });
+        document.documentElement.classList.toggle('yt3l-subs-on', subs.on);
+        ['zh', 'py', 'en'].forEach((k) => document.documentElement.classList.toggle('yt3l-subs-hide-' + k, !subs[k]));
         schedule();
     }
     if (document.documentElement) start();

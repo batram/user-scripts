@@ -89,6 +89,10 @@ line, and the cue being spoken is highlighted as the video plays.
 
 - Chips at the top of the panel hide or show each of the three lines (hide English to test
   yourself); the choice is remembered.
+- The same lines can be shown on the video instead of YouTube's captions: the player's
+  settings menu, under Subtitles/CC, gets an entry "中文 + pīnyīn + English" next to the
+  regular tracks, with switches underneath to pick which of the three lines to draw. Picking a
+  regular track (or Off) switches back.
 - English comes from the video's own English captions when it has them, otherwise from
   YouTube's automatic translation of the Chinese track.
 - Pinyin is generated in the browser with [pinyin-pro](https://github.com/zh-lx/pinyin-pro)
