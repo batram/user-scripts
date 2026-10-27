@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Picture-in-Picture Button
 // @namespace    http://tampermonkey.net
-// @version      1.1
+// @version      1.2
 // @homepageURL  https://github.com/batram/user-scripts
 // @supportURL   https://github.com/batram/user-scripts/issues
 // @updateURL    https://raw.githubusercontent.com/batram/user-scripts/master/youtube-pip-button.user.js
@@ -28,22 +28,30 @@
 
     // ---------------------------------------------------------------------
     // What this engine can do
-    //   standard: HTMLVideoElement.requestPictureInPicture (Chromium, Once desktop, Safari)
-    //   webkit:   webkitSetPresentationMode (older iOS / WKWebView)
-    //   hint:     desktop Firefox has PiP, but only through its own UI — explain how
-    //   none:     no exposed API; Once Android may supply its native bridge shortly
+    //   standard:   HTMLVideoElement.requestPictureInPicture (Chromium, Once desktop,
+    //               Firefox 157+, Safari)
+    //   webkit:     webkitSetPresentationMode (older iOS / WKWebView)
+    //   fullscreen: Gecko on Android (Firefox, Once mobile) has no page API, but the
+    //               app enters native PiP when a fullscreen video is playing and the
+    //               user goes Home. The button gets the player there.
+    //   hint:       older desktop Firefox has PiP only through its own UI — explain how
+    //   none:       no exposed API at all. Once Android may supply its native bridge
+    //               shortly after load ("once-pip-ready"), which re-evaluates the mode.
     // ---------------------------------------------------------------------
-    const isAndroid = /Android/i.test(navigator.userAgent);
     const isGecko = /Gecko\/\d/.test(navigator.userAgent) && !/like Gecko/.test(navigator.userAgent);
     const isMac = /Mac/.test(navigator.platform || navigator.userAgent);
+    // "Desktop site" swaps the UA for a desktop one, so the UA alone can't tell.
+    // The platform and the touch-only pointer still give a phone away.
+    const isAndroid = /Android/i.test(navigator.userAgent)
+        || /^Linux (arm|aarch64)/i.test(navigator.platform || '')
+        || (isGecko && matchMedia('(hover: none) and (pointer: coarse)').matches);
 
     function pipMode() {
-        if ('pictureInPictureEnabled' in document) {
-            return document.pictureInPictureEnabled ? 'standard' : 'none';
-        }
+        if ('pictureInPictureEnabled' in document && document.pictureInPictureEnabled) return 'standard';
         const probe = HTMLVideoElement.prototype;
         if (typeof probe.webkitSetPresentationMode === 'function') return 'webkit';
-        if (isGecko && !isAndroid) return 'hint';
+        if (isGecko && isAndroid) return document.fullscreenEnabled ? 'fullscreen' : 'none';
+        if (isGecko && !('pictureInPictureEnabled' in document)) return 'hint';
         return 'none';
     }
 
@@ -133,6 +141,11 @@
             return;
         }
 
+        if (MODE === 'fullscreen') {
+            fullscreenForPip(button, video);
+            return;
+        }
+
         // m.youtube.com marks the video disablepictureinpicture; it would make the request fail
         video.disablePictureInPicture = false;
         video.removeAttribute('disablepictureinpicture');
@@ -159,6 +172,33 @@
                 ? 'Start the video first, then try picture-in-picture'
                 : 'Picture-in-picture is not available here');
         });
+    }
+
+    // Android Gecko: native PiP starts from a playing fullscreen video when the user
+    // leaves the app. Go fullscreen through YouTube's own button (so its player UI
+    // follows), make sure it plays, and say what's left to do.
+    const HOME_HINT = 'Go to the home screen to keep watching in picture-in-picture';
+    function fullscreenForPip(button, video) {
+        if (video.paused) video.play().catch((e) => console.warn(TAG, e));
+        if (document.fullscreenElement) {
+            toast(button, HOME_HINT);
+            return;
+        }
+        const player = playerOf(button);
+        // Desktop player: .ytp-fullscreen-button; m.youtube.com: .fullscreen-icon
+        const selector = '.ytp-fullscreen-button, .fullscreen-icon';
+        const native = (player && player.querySelector(selector)) || document.querySelector(selector);
+        const done = () => setTimeout(() => toast(button, HOME_HINT), 300);
+        document.addEventListener('fullscreenchange', done, { once: true });
+        if (native) {
+            native.click();
+        } else {
+            (player || video).requestFullscreen().catch((e) => {
+                document.removeEventListener('fullscreenchange', done);
+                console.warn(TAG, e);
+                toast(button, 'Full screen is not available here');
+            });
+        }
     }
 
     // Keep every button's icon/label in sync with the actual PiP state
@@ -214,7 +254,10 @@
     // ---------------------------------------------------------------------
     let toastTimer = 0;
     function toast(from, text) {
-        const player = playerOf(from);
+        let player = playerOf(from);
+        // Only the fullscreen element's subtree is rendered while fullscreen
+        const fs = document.fullscreenElement;
+        if (fs && !(player && fs.contains(player))) player = fs;
         if (!player) return;
         let node = player.querySelector('.ytpip-toast');
         if (!node) {

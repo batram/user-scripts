@@ -71,8 +71,11 @@ m.youtube.com. Click again, or close the floating window, to return.
   so playback continues when you switch apps.
 - Older Firefox has picture-in-picture only through its own controls. There the button shows a
   hint with the shortcut (`Ctrl+Shift+]`) instead.
-- On browsers with no way to open picture-in-picture at all (Gecko on Android, which includes
-  Once's Android app), no button is added.
+- Gecko on Android (Firefox, Once's Android app) has no page API, but the app enters native
+  picture-in-picture when a fullscreen video is playing and you go to the home screen. There
+  the button puts the player in fullscreen, starts playback and tells you to press Home.
+- If Once's native bridge announces itself after the page loaded (`once-pip-ready`), the
+  script re-evaluates and switches to the standard API.
 
 ## YouTube Transcript: Chinese + Pinyin + English
 
