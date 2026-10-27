@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         YouTube Transcript: Chinese + Pinyin + English
 // @namespace    http://tampermonkey.net
-// @version      1.1
+// @version      1.2
 // @homepageURL  https://github.com/batram/user-scripts
 // @supportURL   https://github.com/batram/user-scripts/issues
 // @updateURL    https://raw.githubusercontent.com/batram/user-scripts/master/youtube-transcript-pinyin.user.js
@@ -259,13 +259,33 @@
         return (h ? h + ':' : '') + mm + ':' + String(sec).padStart(2, '0');
     }
 
-    function toPinyin(zh) {
+    // Chinese text as a row of columns, each hanzi with its pinyin right above
+    // it; runs of non-Chinese text (numbers, latin) stay one block without pinyin.
+    function hanziWithPinyin(zh) {
+        const row = document.createElement('div');
+        row.className = 'yt3l-zhpy';
+        let items;
         try {
-            return window.pinyinPro.pinyin(zh, { nonZh: 'consecutive' });
+            items = window.pinyinPro.pinyin(zh, { type: 'all', nonZh: 'consecutive' });
         } catch (e) {
             console.warn(TAG, 'pinyin failed', e);
-            return '';
+            items = [{ origin: zh, pinyin: '', isZh: false }];
         }
+        for (const it of items) {
+            const text = it.origin;
+            if (!text || (!it.isZh && !text.trim())) continue;
+            const col = document.createElement('span');
+            col.className = 'yt3l-col' + (it.isZh ? '' : ' yt3l-col-other');
+            const py = document.createElement('span');
+            py.className = 'yt3l-py';
+            py.textContent = it.isZh ? it.pinyin : '';
+            const hz = document.createElement('span');
+            hz.className = 'yt3l-zh';
+            hz.textContent = text;
+            col.append(py, hz);
+            row.appendChild(col);
+        }
+        return row;
     }
 
     function line(cls, text) {
@@ -285,11 +305,8 @@
         time.textContent = fmtTime(cue.start);
         const lines = document.createElement('div');
         lines.className = 'yt3l-lines';
-        lines.append(
-            line('yt3l-zh', cue.zh),
-            line('yt3l-py', cue.zh ? toPinyin(cue.zh) : ''),
-            line('yt3l-en', cue.en.join(' ')),
-        );
+        if (cue.zh) lines.appendChild(hanziWithPinyin(cue.zh));
+        lines.appendChild(line('yt3l-en', cue.en.join(' ')));
         node.append(time, lines);
         node.addEventListener('click', (e) => {
             // seek to this cue rather than to the start of YouTube's row
@@ -425,8 +442,17 @@
             .yt3l-lines { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
             .yt3l-line { white-space: normal; word-break: break-word; }
             .yt3l-line:empty { display: none; }
-            .yt3l-zh { font-size: 1.7rem; line-height: 1.4; letter-spacing: .04em; }
-            .yt3l-py { font-size: 1.25rem; line-height: 1.35; color: var(--yt-spec-text-secondary, #606060); }
+            .yt3l-zhpy { display: flex; flex-wrap: wrap; align-items: flex-end; column-gap: 3px; row-gap: 4px; }
+            .yt3l-col { display: inline-flex; flex-direction: column; align-items: center; }
+            .yt3l-col-other { align-items: flex-start; }
+            .yt3l-zh { font-size: 1.7rem; line-height: 1.25; }
+            .yt3l-py {
+                font-size: 1.05rem; line-height: 1.2; min-height: 1.2em; white-space: nowrap;
+                color: var(--yt-spec-text-secondary, #606060);
+            }
+            .yt3l-hide-py .yt3l-zhpy { column-gap: 0; }
+            .yt3l-hide-zh .yt3l-zhpy { column-gap: 6px; }
+            .yt3l-hide-zh.yt3l-hide-py .yt3l-zhpy { display: none; }
             .yt3l-en { font-size: 1.3rem; line-height: 1.4; color: var(--yt-spec-text-primary, #0f0f0f); opacity: .85; }
             .yt3l-hide-zh .yt3l-zh, .yt3l-hide-py .yt3l-py, .yt3l-hide-en .yt3l-en { display: none; }
             .yt3l-toggles { display: flex; gap: 6px; padding: 0 16px 8px; }
